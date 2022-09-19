@@ -4,9 +4,12 @@ namespace app\controllers;
 
 use app\models\Article;
 use app\models\ArticleSearch;
+use Yii;
+use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\web\ForbiddenHttpException;
 
 /**
  * ArticleController implements the CRUD actions for Article model.
@@ -21,6 +24,17 @@ class ArticleController extends Controller
         return array_merge(
             parent::behaviors(),
             [
+                [
+                    'class' => AccessControl::class,
+                    'only'  => ['create','delete','update'],
+                    'rules' => [
+                        [
+                            'actions' => ['create','update','delete'],
+                            'allow' => true,
+                            'roles' => ['@']
+                        ]
+                    ]
+                ],
                 'verbs' => [
                     'class' => VerbFilter::className(),
                     'actions' => [
@@ -49,14 +63,14 @@ class ArticleController extends Controller
 
     /**
      * Displays a single Article model.
-     * @param int $id ID
+     * @param string $slug SLUG
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionView($id)
+    public function actionView($slug)
     {
         return $this->render('view', [
-            'model' => $this->findModel($id),
+            'model' => $this->findModel($slug),
         ]);
     }
 
@@ -71,7 +85,7 @@ class ArticleController extends Controller
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+                return $this->redirect(['view', 'slug' => $model->slug]);
             }
         } else {
             $model->loadDefaultValues();
@@ -85,16 +99,22 @@ class ArticleController extends Controller
     /**
      * Updates an existing Article model.
      * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
+     * @param int $slug ID
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionUpdate($id)
+    public function actionUpdate($slug)
     {
-        $model = $this->findModel($id);
+        $model = $this->findModel($slug);
+
+        if ($model->created_by !== Yii::$app->user->id)
+        {
+            throw new ForbiddenHttpException("Action not allowed. Permission reserved for Article Owner", 1);
+            
+        }
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+            return $this->redirect(['view', 'slug' => $model->slug]);
         }
 
         return $this->render('update', [
@@ -105,15 +125,25 @@ class ArticleController extends Controller
     /**
      * Deletes an existing Article model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
-     * @param int $id ID
+     * @param int $slug ID
      * @return \yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionDelete($id)
+    public function actionDelete($slug)
     {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($slug);
 
-        return $this->redirect(['index']);
+        if ($model->created_by !== Yii::$app->user->id)
+        {
+            throw new ForbiddenHttpException("Action not allowed. Permission reserved for Article Owner", 1);
+            
+        }
+        else
+        {
+            $model->delete();
+
+            return $this->redirect(['index']);
+        }
     }
 
     /**
@@ -123,9 +153,9 @@ class ArticleController extends Controller
      * @return Article the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel($id)
+    protected function findModel($slug)
     {
-        if (($model = Article::findOne(['id' => $id])) !== null) {
+        if (($model = Article::findOne(['slug' => $slug])) !== null) {
             return $model;
         }
 
