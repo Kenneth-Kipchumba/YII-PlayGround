@@ -4,9 +4,12 @@ namespace app\controllers;
 
 use app\models\Email;
 use app\models\EmailSearch;
+use Yii;
+use yii\base\ErrorException;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\web\UploadedFile;
 
 /**
  * EmailsController implements the CRUD actions for Email model.
@@ -69,11 +72,53 @@ class EmailsController extends Controller
     {
         $model = new Email();
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
+        if ($this->request->isPost)
+        {
+            if ($model->load($this->request->post()))
+            {
+                $model->save();
+                $model->attachment = UploadedFile::getInstance($model, 'attachment');
+                //print_r($model->attachment);die();
+
+                if ($model->attachment)
+                {
+                    $time = time();
+                    $model->attachment->saveAs('email_attachments/' . $time . '.' . $model->attachment->extension);
+                    $model->attachment = 'email_attachments/' . $time . $model->attachment->extension;
+                }
+                if ($model->attachment)
+                {
+                    try {
+                        $value = Yii::$app->mailer->compose()
+                        ->setFrom(['example@email.com' => "Sender's Name Here"])
+                        ->setTo($model->email)
+                        ->setSubject($model->subject)
+                        ->setHtmlBody($model->content)
+                        ->attach($model->attachment)
+                        ->send();
+                    } catch (ErrorException $e) {
+                        Yii::warning($e->getMessage());
+                    }
+                    
+                    //print_r($model->attachment);die();
+                }
+                else
+                {
+                    $value = Yii::$app->mailer->compose()
+                    ->setFrom(['example@email.com' => "Sender's Name Here"])
+                    ->setTo($model->email)
+                    ->setSubject($model->subject)
+                    ->setHtmlBody($model->content)
+                    ->send();
+                }
+
+                $model->save();
+
                 return $this->redirect(['view', 'id' => $model->id]);
             }
-        } else {
+        }
+        else
+        {
             $model->loadDefaultValues();
         }
 

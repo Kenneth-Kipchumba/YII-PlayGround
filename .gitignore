@@ -37,3 +37,6 @@ tests/_support/_generated
 
 #Database Credentials
 /config/db.php
+
+#All files under email_attachments folder
+/web/email_attachments/*

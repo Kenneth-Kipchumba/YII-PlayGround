@@ -10,7 +10,7 @@ use yii\widgets\ActiveForm;
 
 <div class="email-form">
 
-    <?php $form = ActiveForm::begin(); ?>
+    <?php $form = ActiveForm::begin(['options' => ['enctype' => 'multipart/form-data']]); ?>
 
     <?= $form->field($model, 'id')->textInput() ?>
 
@@ -22,7 +22,9 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'content')->textarea(['rows' => 6]) ?>
 
-    <?= $form->field($model, 'attachment')->textInput(['maxlength' => true]) ?>
+    <hr>
+
+    <?= $form->field($model, 'attachment')->fileInput(['maxlength' => 255]) ?>
 
     <div class="form-group">
         <?= Html::submitButton('Save', ['class' => 'btn btn-success']) ?>
